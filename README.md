@@ -6,6 +6,6 @@
 * [x] Created a database of save states, known as a Mario Moment, from worlds 1-1 through 5-1
 * [x] Each training run of a genome loads a random Mario Moment as the starting point
 * [x] When a run completes a level, a new Mario Moment is chosen and the training run continues from there
-* [] Exhastivly test each hyperparameter to find the combination that creates the best results
-* [] Employ a 10 fold cross validation of the models to create a diverse set of elite models for the final test runs
-* [] Create a test run algorithm that tests the elite models from each fold to determine the best model
+* :white_large_square Exhastivly test each hyperparameter to find the combination that creates the best results
+* :white_large_square Employ a 10 fold cross validation of the models to create a diverse set of elite models for the final test runs
+* :white_large_square Create a test run algorithm that tests the elite models from each fold to determine the best model
