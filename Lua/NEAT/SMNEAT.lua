@@ -5,43 +5,38 @@
 -- The remaining endgame worlds (5-2 -> 8-4) will serve as the test dataset to verify the trained networks are able to apply the knowledge gained from training to unfamiliar situations
 
 --
--- Helper funcitons
+-- Setup Random
 --
-
-function NextMoment()
-	TotalDistance = TotalDistance + rightmost -- save the distance traveled in the run
-
-    moment = Filenames[math.random(0, MaxMoments)] -- select a new Mario Moment
-    savestate.load(moment)                         -- load the moment
-    getPositions()
-	MarioStart = marioX
-    rightmost = 0
-	--pool.currentFrame = 0
-	timeout = TimeoutConstant
-    clearJoypad()
-    evaluateCurrent()
-	
-end
-
---
--- Main loop
---
-
 math.randomseed(os.time()) -- setup random number gen seed
 for i=0,10 do
 	math.random() -- warm up the RNG
 end
 
-ButtonNames = { "A", "B", "Up", "Down", "Left", "Right" }
-MaxMoments = 234
-MarioStart = 0
-TotalDistance = 0
-
+MaxMoments = 222
 Filenames = {}
-
 for i=0,MaxMoments do
 	Filenames[i] = "../../Saves/mm-"..i..".state"
 end
+
+function ShuffleInPlace(t)
+    for i = #t, 2, -1 do
+        local j = math.random(i)
+        t[i], t[j] = t[j], t[i]
+    end
+end
+
+ShuffleInPlace(Filenames)
+--
+-- Main loop
+--
+
+ButtonNames = { "A", "B", "Up", "Down", "Left", "Right" }
+
+MarioStart = 0
+TotalDistance = 0
+CurrentMoment = Filenames[0]
+CurrentIndex = 0
+MaxMoment = "none"
 
 BoxRadius = 6
 InputSize = (BoxRadius*2+1)*(BoxRadius*2+1)
@@ -66,7 +61,7 @@ StepSize = 0.1
 DisableMutationChance = 0.4
 EnableMutationChance = 0.2
 
-TimeoutConstant = 20
+TimeoutConstant = 60
 
 MaxNodes = 1000000
 
@@ -133,19 +128,20 @@ while true do
 		TotalDistance = TotalDistance + rightmost			  -- add the distance traveled this run to the total
 		local fitness = TotalDistance - pool.currentFrame / 2 -- set this genome's fitness to how far mario traveled during the entire run - half of the frames it took to get there
         if fitness == 0 then                            	  -- punish the model for not progressing during the run
-            fitness = -100
+            fitness = -1000
         end
 		
 		genome.fitness = fitness							  -- set this genomes fitness to the calculated value
 		
 		if fitness > pool.maxFitness then					  -- if this genome is better than the current best
 			pool.maxFitness = fitness						  -- make it the new best
+			MaxMoment = CurrentMoment
             forms.settext(maxFitnessLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
 			print("Saving Backup ->" .. "backup_" .. pool.generation .. "_" .. forms.gettext(saveLoadFile))
 			writeFile("backup_" .. pool.generation .. "_" .. forms.gettext(saveLoadFile)) -- create a backup containing the new best model
 		end
 		
-		console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness)
+		console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness .. " Moment: " .. CurrentMoment)
 		pool.currentSpecies = 1
 		pool.currentGenome = 1
 		while fitnessAlreadyMeasured() do
@@ -166,11 +162,12 @@ while true do
 	end
 	if not forms.ischecked(hideBanner) then
 		gui.drawText(0, 0, "Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " (" .. math.floor(measured/total*100) .. "%)", 0xFF000000, 11)
-		gui.drawText(0, 12, "Fitness: " .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3), 0xFF000000, 11)
-		gui.drawText(100, 12, "Max Fitness: " .. math.floor(pool.maxFitness), 0xFF000000, 11)
+		gui.drawText(0, 12, "Fitness:" .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3), 0xFF000000, 11)
+		gui.drawText(100, 12, "Max Fitness:" .. math.floor(pool.maxFitness), 0xFF000000, 11)
+		--gui.drawText(0, 26, "Max Moment: " .. MaxMoment, 0xFF000000, 11)
 	end
 		
 	pool.currentFrame = pool.currentFrame + 1
 
-	emu.frameadvance();
+	emu.frameadvance()
 end

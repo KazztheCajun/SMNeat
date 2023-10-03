@@ -1,3 +1,23 @@
+function NextMoment()
+	TotalDistance = TotalDistance + rightmost -- save the distance traveled in the run -- select a new Mario Moment
+	CurrentIndex = CurrentIndex+1
+    savestate.load(Filenames[CurrentIndex])     -- load the moment
+    getPositions()
+	MarioStart = marioX
+    rightmost = 0
+	--pool.currentFrame = 0
+	timeout = TimeoutConstant
+    clearJoypad()
+    evaluateCurrent()
+	
+end
+
+function RandomMoment()
+	local temp = Filenames[math.random(0, MaxMoments)]
+	return temp
+end
+
+
 function clearJoypad()
 	controller = {}
 	for b = 1,#ButtonNames do
@@ -174,7 +194,7 @@ function savePool()
 end
 
 function loadFile(filename)
-        local file = io.open("Pools/" .. filename, "r")
+    local file = io.open("Pools/" .. filename, "r")
 	pool = newPool()
 	pool.generation = file:read("*number")
 	pool.maxFitness = file:read("*number")

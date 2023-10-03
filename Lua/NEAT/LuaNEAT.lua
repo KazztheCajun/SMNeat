@@ -191,7 +191,7 @@ function crossover(g1, g2)
 		g2 = tempg
 	end
 
-	local child = newGenome()
+	local child = newGenome() -- child inherits the moment from the most fit parent
 	
 	local innovations2 = {}
 	for i=1,#g2.genes do
@@ -646,8 +646,11 @@ function fitnessAlreadyMeasured()
 end
 
 function initializeRun()
-    moment = Filenames[math.random(0, MaxMoments)]
-    savestate.load(moment)
+	local species = pool.species[pool.currentSpecies]
+	local genome = species.genomes[pool.currentGenome]
+	CurrentIndex = 0
+    CurrentMoment = Filenames[CurrentIndex]
+    savestate.load(CurrentMoment)
     getPositions()
     MarioStart = marioX
     rightmost = 0
@@ -656,8 +659,6 @@ function initializeRun()
 	TotalDistance = 0
 	clearJoypad()
 	
-	local species = pool.species[pool.currentSpecies]
-	local genome = species.genomes[pool.currentGenome]
 	generateNetwork(genome)
 	evaluateCurrent()
 end

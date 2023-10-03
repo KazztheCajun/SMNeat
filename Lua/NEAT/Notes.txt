@@ -1,0 +1,12 @@
+Test run #1
+1) Suffered from an issue where mario locations would encounter an overflow value of 64000 for thier fitness in world 4-4, poluting the gene pool
+	-- Fixed by removing 4-4 from the available Mario Moments
+2) Mario learned to run and jump, but not when to effectively do so.  Also, Mario would randomly just stop after going forward for a bit.
+
+Test run #2
+1) Initial fitness starts negative and if a genome is able to beat a level, the fitness is reduced by 100 or more.
+2) Loading a random moment each run is leading to an exploding search space and may be detrimental to training.
+   I believe I need to make a shuffled list of moments for the poplulation and give rewards to a genome when it completes a moment.
+3) There is a bug where the algorithm doesn't properly detect mario hitting the axe to kill bowser as beating a level
+
+Test run #3
