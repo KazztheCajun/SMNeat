@@ -8,35 +8,25 @@
 -- Setup Random
 --
 math.randomseed(os.time()) -- setup random number gen seed
-for i=0,10 do
+for i=1,10 do
 	math.random() -- warm up the RNG
 end
+
+--
+-- Setup Dataset
+--
 
 MaxMoments = 222
 Filenames = {}
 for i=0,MaxMoments do
-	Filenames[i] = "../../Saves/mm-"..i..".state"
+	Filenames[i+1] = "../../Saves/mm-"..i..".state"
 end
 
-function ShuffleInPlace(t)
-    for i = #t, 2, -1 do
-        local j = math.random(i)
-        t[i], t[j] = t[j], t[i]
-    end
-end
-
-ShuffleInPlace(Filenames)
 --
--- Main loop
+-- Setup Hyperparameters
 --
 
 ButtonNames = { "A", "B", "Up", "Down", "Left", "Right" }
-
-MarioStart = 0
-TotalDistance = 0
-CurrentMoment = Filenames[0]
-CurrentIndex = 0
-MaxMoment = "none"
 
 BoxRadius = 6
 InputSize = (BoxRadius*2+1)*(BoxRadius*2+1)
@@ -72,10 +62,6 @@ if pool == nil then
 	initializePool()
 end
 
-writeFile("temp.pool")
-
-event.onexit(onExit)
-
 form = forms.newform(300, 300, "Fitness")
 maxFitnessLabel = forms.label(form, "Max Fitness: " .. math.floor(pool.maxFitness), 5, 8)
 showNetwork = forms.checkbox(form, "Show Map", 5, 30)
@@ -83,91 +69,157 @@ showMutationRates = forms.checkbox(form, "Show M-Rates", 5, 52)
 restartButton = forms.button(form, "Restart", initializePool, 5, 77)
 saveButton = forms.button(form, "Save", savePool, 5, 102)
 loadButton = forms.button(form, "Load", loadPool, 80, 102)
-saveLoadFile = forms.textbox(form, "SMNeat.pool", 170, 25, nil, 5, 148)
+saveLoadFile = forms.textbox(form, "SMNeat_Test7.pool", 170, 25, nil, 5, 148)
 saveLoadLabel = forms.label(form, "Save/Load:", 5, 129)
 playTopButton = forms.button(form, "Play Top", playTop, 5, 170)
 hideBanner = forms.checkbox(form, "Hide Banner", 5, 190)
+pauseTraining = forms.checkbox(form, "Pause Training", 5, 210)
 
 
-while true do
-	local backgroundColor = 0xD0FFFFFF
-	if not forms.ischecked(hideBanner) then
-		gui.drawBox(0, 0, 300, 26, backgroundColor, backgroundColor)
+Filenames = Shuffle(Filenames)
+backupDataset(forms.gettext(saveLoadFile) .. "-gen-" .. pool.generation)
+writeFile("temp.pool")
+
+MarioStart = 0
+TotalDistance = 0
+CurrentIndex = 1
+FitnessBonus = 0
+ForwardProgress = true
+CurrentMoment = Filenames[CurrentIndex]
+MaxMoment = "none"
+backgroundColor = 0xD0FFFFFF
+LastFloat = 0x00
+
+event.onexit(onExit)
+
+function endRun(genome, isAlive)
+	TotalDistance = TotalDistance + rightmost			  -- add the distance traveled this run to the total
+	local fitness = TotalDistance - pool.currentFrame / 4 -- set this genome's fitness to how far mario traveled during the entire run - half of the frames it took to get there
+	
+	fitness = fitness + FitnessBonus
+
+	if(isAlive and TotalDistance + rightmost > 0 and marioSpeed > 6) then -- if mario is alive, has made progress, and is moving at the end of the run, reward the model
+		fitness = fitness + 300
 	end
 
+	if fitness == 0 then                            	  -- punish the model for not progressing during the run
+		fitness = -1000
+	end
+
+	genome.fitness = fitness							  -- set this genomes fitness to the calculated value
+	
+	if fitness > pool.maxFitness then					  -- if this genome is better than the current best
+		pool.maxFitness = fitness						  -- make it the new best
+		MaxMoment = CurrentMoment
+		forms.settext(maxFitnessLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
+		print("Saving Backup ->" .. "backup_" .. pool.generation .. "_" .. forms.gettext(saveLoadFile))
+		writeFile("backup_" .. pool.generation .. "_" .. forms.gettext(saveLoadFile)) -- create a backup containing the new best model
+	end
+	
+	console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness .. " Moment: " .. CurrentMoment)
+	pool.currentSpecies = 1
+	pool.currentGenome = 1
+	while fitnessAlreadyMeasured() do
+		nextGenome()
+	end
+	initializeRun()
+end
+
+--
+-- Main loop
+--
+
+while true do
+	local measured = 0
+	local total = 0
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
-	
+
+	if not forms.ischecked(hideBanner) then
+		gui.drawBox(0, 0, 300, 38, backgroundColor, backgroundColor)
+	end
+
 	if forms.ischecked(showNetwork) then
 		displayGenome(genome)
 	end
-	
-	if pool.currentFrame%5 == 0 then
-		evaluateCurrent()
-	end
 
-	joypad.set(controller)
+	if not forms.ischecked(pauseTraining) then
+		if pool.currentFrame%5 == 0 then
+			evaluateCurrent()
+		end
 
-    getPositions()
-    
-    local trueRight = marioX - MarioStart
-	--print("Start: " .. MarioStart.." | Progress: "..trueRight)
-	if trueRight > rightmost then -- if mario has made progress
-		rightmost = trueRight 	      -- update the current progress
-		timeout = TimeoutConstant	  -- reset the timeout value
-	end
-	
-	timeout = timeout - 1
-	
-	if (memory.readbyte(0x001D) == 0x03) then -- if mario has reached the level flag
-		NextMoment() -- load a new moment and continue the run
-    end
-	
-	local timeoutBonus = pool.currentFrame / 4 			-- Add a extra time before timeout the longer this genome is able to play the game
-    if timeout + timeoutBonus <= 0 then					-- Once the timout + bonus is gone
-		TotalDistance = TotalDistance + rightmost			  -- add the distance traveled this run to the total
-		local fitness = TotalDistance - pool.currentFrame / 2 -- set this genome's fitness to how far mario traveled during the entire run - half of the frames it took to get there
-        if fitness == 0 then                            	  -- punish the model for not progressing during the run
-            fitness = -1000
-        end
+		joypad.set(controller)
+
+		getPositions()
 		
-		genome.fitness = fitness							  -- set this genomes fitness to the calculated value
-		
-		if fitness > pool.maxFitness then					  -- if this genome is better than the current best
-			pool.maxFitness = fitness						  -- make it the new best
-			MaxMoment = CurrentMoment
-            forms.settext(maxFitnessLabel, "Max Fitness: " .. math.floor(pool.maxFitness))
-			print("Saving Backup ->" .. "backup_" .. pool.generation .. "_" .. forms.gettext(saveLoadFile))
-			writeFile("backup_" .. pool.generation .. "_" .. forms.gettext(saveLoadFile)) -- create a backup containing the new best model
+		-- if(lastFloat == 0x01 and marioFloat == 0x00) then -- reward a successful jump
+		-- 	FitnessBonus = FitnessBonus + 50
+		-- end
+
+		lastFloat = marioFloat
+
+		if(marioSpeed > 24) then
+			FitnessBonus = FitnessBonus + 1
+		end
+
+		local trueRight = marioX - MarioStart
+		--print("Start: " .. MarioStart.." | Progress: "..trueRight)
+		if trueRight > rightmost then -- if mario has made progress
+			rightmost = trueRight 	  -- update the current progress
+			timeout = TimeoutConstant
+			ForwardProgress = true
 		end
 		
-		console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness .. " Moment: " .. CurrentMoment)
-		pool.currentSpecies = 1
-		pool.currentGenome = 1
-		while fitnessAlreadyMeasured() do
-			nextGenome()
+		timeout = timeout - 1
+		
+		if (memory.readbyte(0x001D) == 0x03) then -- if mario has reached the level flag
+			FitnessBonus = FitnessBonus + 10000
+			NextMoment() -- load a new moment and continue the run
 		end
-		initializeRun()
-	end
+		
+		getEnemyState()
 
-	local measured = 0
-	local total = 0
-	for _,species in pairs(pool.species) do
-		for _,genome in pairs(species.genomes) do
-			total = total + 1
-			if genome.fitness ~= 0 then
-				measured = measured + 1
+		if(enemyState1 == 0x04) then
+			FitnessBonus = FitnessBonus + 20
+		end
+		if(enemyState2 == 0x04) then
+			FitnessBonus = FitnessBonus + 20
+		end
+		if(enemyState3 == 0x04) then
+			FitnessBonus = FitnessBonus + 20
+		end
+		if(enemyState4 == 0x04) then
+			FitnessBonus = FitnessBonus + 20
+		end
+		if(enemyState5 == 0x04) then
+			FitnessBonus = FitnessBonus + 20
+		end
+
+		local timeoutBonus = pool.currentFrame / 8 			-- Add a extra time before timeout the longer this genome is able to play the game
+		if timeout + timeoutBonus <= 0 then -- Once the timout + bonus is gone, mario falls of screen, or dies
+			endRun(genome, true)
+		elseif screenY > 1 or marioState == 0x0B then -- If mario dies or falls offscreen
+			endRun(genome, false)
+		end
+		for _,species in pairs(pool.species) do
+			for _,genome in pairs(species.genomes) do
+				total = total + 1
+				if genome.fitness ~= 0 then
+					measured = measured + 1
+				end
 			end
 		end
+			
+		pool.currentFrame = pool.currentFrame + 1
 	end
+	
 	if not forms.ischecked(hideBanner) then
 		gui.drawText(0, 0, "Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " (" .. math.floor(measured/total*100) .. "%)", 0xFF000000, 11)
-		gui.drawText(0, 12, "Fitness:" .. math.floor(rightmost - (pool.currentFrame) / 2 - (timeout + timeoutBonus)*2/3), 0xFF000000, 11)
-		gui.drawText(100, 12, "Max Fitness:" .. math.floor(pool.maxFitness), 0xFF000000, 11)
-		--gui.drawText(0, 26, "Max Moment: " .. MaxMoment, 0xFF000000, 11)
+		gui.drawText(0, 12, "Fitness:" .. math.floor((FitnessBonus + TotalDistance + rightmost) - (pool.currentFrame / 4)), 0xFF000000, 11)
+		gui.drawText(95, 12, "Max Fitness:" .. math.floor(pool.maxFitness), 0xFF000000, 11)
+		gui.drawText(0, 24, "State: " .. marioState .. " | Speed: " .. marioSpeed .. " | Float: " .. marioFloat, 0xFF000000, 11)
 	end
-		
-	pool.currentFrame = pool.currentFrame + 1
 
 	emu.frameadvance()
 end
+

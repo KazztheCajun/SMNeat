@@ -1,6 +1,6 @@
 function NextMoment()
 	TotalDistance = TotalDistance + rightmost -- save the distance traveled in the run -- select a new Mario Moment
-	CurrentIndex = CurrentIndex+1
+	CurrentIndex = CurrentIndex + 1
     savestate.load(Filenames[CurrentIndex])     -- load the moment
     getPositions()
 	MarioStart = marioX
@@ -17,6 +17,40 @@ function RandomMoment()
 	return temp
 end
 
+function Shuffle(list)
+    for i = #list, 2, -1  do
+        local j = math.random(i)
+        local temp = list[i]
+		list[i] = list[j]
+		list[j] = temp
+    end
+	return list
+end
+
+function backupDataset(filename)
+	local file = io.open("Datasets/" .. filename, "w")
+	for i=1, #Filenames do
+		file:write(Filenames[i].."\n")
+	end
+	file:close()
+end
+
+function loadDataset(filename)
+	local file = io.open("Datasets/" .. filename, 'r')
+	local list = {}
+	for i=1, MaxMoments+1 do
+		list[i] = file:read()
+	end
+	return list
+end
+
+function getEnemyState()
+	enemyState1 = memory.readbyte(0x001E)
+	enemyState2 = memory.readbyte(0x001F)
+	enemyState3 = memory.readbyte(0x0020)
+	enemyState4 = memory.readbyte(0x0021)
+	enemyState5 = memory.readbyte(0x0022)
+end
 
 function clearJoypad()
 	controller = {}
@@ -243,6 +277,8 @@ end
 function loadPool()
 	local filename = forms.gettext(saveLoadFile)
 	loadFile(filename)
+	CurrentIndex = 0
+	Filenames = loadDataset(filename .. "-gen-" .. pool.generation)
 end
 
 function playTop()
@@ -270,9 +306,14 @@ end
 function getPositions()
 	marioX = memory.readbyte(0x6D) * 0x100 + memory.readbyte(0x86)
 	marioY = memory.readbyte(0x03B8)+16
+	marioState = memory.readbyte(0x000E)
+	marioFloat = memory.readbyte(0x001D)
+	marioDir = memory.readbyte(0x0045)
+	marioSpeed = memory.readbyte(0x0700)
 
 	screenX = memory.readbyte(0x03AD)
-	screenY = memory.readbyte(0x03B8)
+	screenY = memory.readbyte(0x00B5)
+	
 end
 
 function getTile(dx, dy)

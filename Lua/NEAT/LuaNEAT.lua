@@ -620,10 +620,12 @@ function newGeneration()
         local child = children[c]
         addToSpecies(child)
     end
-
+	pool.maxFitness = 0
     pool.generation = pool.generation + 1
-
-    writeFile("backup." .. pool.generation .. "." .. forms.gettext(saveLoadFile))
+	Filenames = Shuffle(Filenames)
+	local file = forms.gettext(saveLoadFile)
+	backupDataset(file .. "-gen-" .. pool.generation)
+    writeFile("backup." .. pool.generation .. "." .. file)
 end
 
 function nextGenome()
@@ -648,7 +650,7 @@ end
 function initializeRun()
 	local species = pool.species[pool.currentSpecies]
 	local genome = species.genomes[pool.currentGenome]
-	CurrentIndex = 0
+	CurrentIndex = 1
     CurrentMoment = Filenames[CurrentIndex]
     savestate.load(CurrentMoment)
     getPositions()
@@ -657,6 +659,7 @@ function initializeRun()
 	pool.currentFrame = 0
     timeout = TimeoutConstant
 	TotalDistance = 0
+	FitnessBonus = 0
 	clearJoypad()
 	
 	generateNetwork(genome)
