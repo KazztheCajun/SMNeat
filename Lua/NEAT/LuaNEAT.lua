@@ -652,6 +652,7 @@ function initializeRun()
 	local genome = species.genomes[pool.currentGenome]
 	CurrentIndex = 1
     CurrentMoment = Filenames[CurrentIndex]
+	GenomeProgress = 1
     savestate.load(CurrentMoment)
     getPositions()
     MarioStart = marioX

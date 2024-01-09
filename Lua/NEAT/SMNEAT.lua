@@ -86,6 +86,7 @@ CurrentIndex = 1
 FitnessBonus = 0
 ForwardProgress = true
 Rightmost = 0
+GenomeProgress = 1
 Timeout = TimeoutConstant
 CurrentMoment = Filenames[CurrentIndex]
 MaxMoment = "none"
@@ -113,10 +114,12 @@ while true do
 	end
 
 	if not forms.ischecked(pauseTraining) then
-		if pool.currentFrame%5 == 0 then
-			evaluateCurrent()
-		end
 
+		-- if pool.currentFrame%5 == 0 then
+		-- 	evaluateCurrent()
+		-- end
+
+		evaluateCurrent()
 		joypad.set(controller)
 
 		getPositions()
@@ -190,9 +193,9 @@ while true do
 	
 	if not forms.ischecked(hideBanner) then
 		gui.drawText(0, 0, "Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " (" .. math.floor(measured/total*100) .. "%)", 0xFF000000, 11)
-		gui.drawText(0, 12, "Fitness:" .. math.floor((FitnessBonus + TotalFitness + Rightmost) - (pool.currentFrame / 4)), 0xFF000000, 11)
-		gui.drawText(95, 12, "Max Fitness:" .. math.floor(pool.maxFitness), 0xFF000000, 11)
-		gui.drawText(0, 24, "State: " .. marioState .. " | Speed: " .. marioSpeed .. " | Float: " .. marioFloat, 0xFF000000, 11)
+		gui.drawText(0, 12, "Fitness:" .. math.floor((FitnessBonus + TotalFitness + (Rightmost - pool.currentFrame / 4)) / CurrentIndex), 0xFF000000, 11)
+		gui.drawText(95, 12, "Max:" .. math.floor(pool.maxFitness), 0xFF000000, 11)
+		gui.drawText(0, 24, "State:" .. marioState .. " | Speed:" .. marioSpeed .. " | Progress:" .. math.floor(GenomeProgress/MaxMoments*100) .. "%", 0xFF000000, 11)
 	end
 
 	emu.frameadvance()

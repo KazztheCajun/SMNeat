@@ -1,6 +1,7 @@
 function NextMoment()
 	TotalFitness = TotalFitness + FitnessBonus + (Rightmost - pool.currentFrame / 4) -- incrment the total fitness by distance traveled, then apply frame penalty, finally add any bonus gained
 	CurrentIndex = CurrentIndex + 1 -- select next Mario Moment
+	GenomeProgress = GenomeProgress + 1 -- increment progress counter
 	if CurrentIndex <= MaxMoments then -- If there is a Mario Moment available
 		savestate.load(Filenames[CurrentIndex]) -- load the moment
 		Rightmost = 0 -- reset distance
@@ -15,12 +16,7 @@ function NextMoment()
 end
 
 function ScoreGenome(genome)
-	TotalFitness = TotalFitness + (Rightmost - pool.currentFrame / 4)		  -- add the distance traveled this run to the total
 	local fitness = TotalFitness / MaxMoments -- set this genomes fitness to the average fitness of each moment in the dataset
-
-	if fitness <= 0 then                            	  -- punish the model for not progressing during the run
-		fitness = -10000
-	end
 
 	genome.fitness = fitness							  -- set this genomes fitness to the calculated value
 	
@@ -31,7 +27,7 @@ function ScoreGenome(genome)
 		writeFile("backup_" .. pool.generation .. "_" .. forms.gettext(saveLoadFile)) -- create a backup containing the new best model
 	end
 	
-	console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. fitness .. " Moment: " .. CurrentMoment)
+	console.writeline("Gen " .. pool.generation .. " species " .. pool.currentSpecies .. " genome " .. pool.currentGenome .. " fitness: " .. math.floor(fitness))
 	pool.currentSpecies = 1
 	pool.currentGenome = 1
 	while fitnessAlreadyMeasured() do
