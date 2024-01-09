@@ -1,3 +1,4 @@
 # Ignore the large pool files
 
 \Lua\NEAT\Pools\Archive
+\Lua\NEAT\Datasets
