@@ -51,3 +51,5 @@ Test run #7
 
 Test run #8
 1) Refactored the training to run each genome through every training instance in a single generation
+
+Peter Whidden pokemon AI YouTube
