@@ -2,3 +2,5 @@
 
 Lua/NEAT/Pools/Archive
 Lua/NEAT/Datasets
+Lua/NEAT/Pools/backup_*.pool
+Lua/NEAT/Pools/backup.*.*.pool
